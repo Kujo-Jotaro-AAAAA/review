@@ -61,7 +61,7 @@ if (finishedWork.effectTag > PerformedWork) {
 
 **更新ref**
 
-#### **根据effectTag分别处理，增删改**
+#### **根据effectTag分别处理**
 
 **placement effect 插入操作**
 
