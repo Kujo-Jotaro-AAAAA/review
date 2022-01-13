@@ -2,7 +2,7 @@
 
 `render`阶段是在内存中进行的，当工作完成后会通知`Renderer`执行对应的`dom`操作
 
-- 分为同/异步情况: 
+- 分为同`or`异步情况: 
 
 同步`performSyncWorkOnRoot`
 
