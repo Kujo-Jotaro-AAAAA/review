@@ -75,7 +75,7 @@
 
 老节点还有, 新节点遍历完了。剩下的老节点都要删除，打上`deletion`标记
 
-4. `oldFiber` 与 `newFiber`都还有剩余, 说明走的是更新操作(节点没有新增删除, 但是更新或移动了位置), 这是diff算法最难理解的部分。
+4. `oldFiber` 与 `newFiber`都还有剩余, 说明走的是更新操作(节点没有新增删除, 但是更新或移动了位置), 这是diff算法最难理解的部分, 也就是diff的移动更新。
 
 ### diff中的移动更新
 
@@ -85,7 +85,7 @@
 
 - `oldIndex` >= `lastPlacedIndex`, 则此节点不用移动, 并将`oldIndex`赋值给`lastPlacedIndex`。
 
-- 此**`oldIndex` < `newFiber`当前的下标, 说明改节点要往右边移动。
+- 此`oldIndex` < `newFiber`当前的下标, 说明改节点要往右边移动。
 
 以下为伪代码，用于理解。
 
