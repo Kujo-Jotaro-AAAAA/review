@@ -1,13 +1,12 @@
 ## Commit阶段
 
 > `commitRoot` 方法是该阶段的起点。
->
+> 
 > 会执行`effectList`链表上关于dom增改删的相关操作, 以及一些生命周期和hooks也会在这里执行。如: `componentDidxxx` `useEffect` 等
 
 ### before mutation之前
 
-将root上的effect连接到effectList的尾部, 当状态为[PerformedWork或者NoEffect](https://github.com/facebook/react/blob/1fb18e22ae66fdb1dc127347e169e73948778e5a/packages/react-reconciler/src/ReactSideEffectTags.js#L14)则跳过直接赋值给finishedWork。 [源码](https://github.com/facebook/react/blob/1fb18e22ae66fdb1dc127347e169e73948778e5a/packages/react-reconciler/src/ReactFiberWorkLoop.new.js#L2085-L2101)
-
+将root上的effect连接到effectList的尾部, 当状态为[PerformedWork或者NoEffect](https://github.com/facebook/react/blob/1fb18e22ae66fdb1dc127347e169e73948778e5a/packages/react-reconciler/src/ReactSideEffectTags.js#L14)则跳过直接赋值给finishedWork。这样才能将根节点的effct状态也囊括进来。  [源码](https://github.com/facebook/react/blob/1fb18e22ae66fdb1dc127347e169e73948778e5a/packages/react-reconciler/src/ReactFiberWorkLoop.new.js#L2085-L2101)
 
 ```js
 // Get the list of effects.
@@ -28,18 +27,19 @@ if (finishedWork.effectTag > PerformedWork) {
   firstEffect = finishedWork.firstEffect;
 }
 ```
-### before mutation-dom操作之前
 
-遍历`effectList`,**执行`commitBeforeMutationEffects`**,  然后执行下列操作:
+### before mutation
+
+遍历`effectList`,**执行`commitBeforeMutationEffects`**,  然后进行下列操作:
 
 **处理DOM节点渲染**/删除后的 autoFocus、blur 逻辑。
 
 **调用getSnapshotBeforeUpdate生命周期钩子**。
 
 > 从Reactv16开始，componentWillXXX钩子前增加了UNSAFE_前缀。
->
+> 
 > 究其原因，是因为重构为异步可中断架构后，render阶段的任务可能中断`or`重新开始，对应的组件在render阶段的生命周期钩子（即componentWillXXX）可能触发多次。
->
+> 
 > 这种行为和Reactv15不一致，所以标记为UNSAFE_。
 
 为此，React提供了替代的生命周期钩子getSnapshotBeforeUpdate。由于该函数是同步的, 避免了多次调用的问题。
@@ -51,7 +51,8 @@ if (finishedWork.effectTag > PerformedWork) {
 为了防止同步执行时阻塞浏览器渲染
 
 - 如何异步调度的? TODO -> (没看懂)
-### mutation-执行dom操作
+
+### mutation
 
 同样的遍历`effectList`, 执行`commitMutationEffects`
 
@@ -71,8 +72,8 @@ if (finishedWork.effectTag > PerformedWork) {
 其中`getHostSibling`操作是很耗性能的, 因为Fiber树和渲染的DOM树节点并不是一一对应的, 要从当前fiber节点找到dom节点, 很可能跨层级遍历.
 
 比如
-```jsx
 
+```jsx
 function Item() {
   return <li><li>;
 }
@@ -98,10 +99,10 @@ rootFiber -----> App -----> div -----> Item -----> li
 // DOM树
 #root ---> div ---> li
 ```
+
 此时给Item前面新增一个兄弟节点`<p>`
 
 ```jsx
-
 function Item() {
   return <li><li>;
 }
@@ -117,6 +118,7 @@ function App() {
 
 ReactDOM.render(<App/>, document.getElementById('root'));
 ```
+
 对应的fiber树和dom树变成了
 
 ```
@@ -172,5 +174,42 @@ for (let i = 0; i < updatePayload.length; i += 2) {
 2. 解绑ref
 3. 调度`useEffect` 的销毁函数
 
-### layout-dom操作后
+### mutation结束, layout之前
 
+切换**双缓存技术**的指针
+
+```js
+root.current = finishedWork;
+```
+
+切换后才是更新完成的dom, 比如`componentWillUnMount`声明周期中获取的dom就是更新之前的。
+
+### layout
+
+该阶段都是在dom渲染完成后, 所触发的声明
+
+主要做两件事情: 
+
+#### 触发对应的声明周期和hooks
+
+**对于class组件**
+
+会根据`current===null`来判断该调用`componentDidMount`还是`componentDidUpdate`
+
+触发`this.setState`的第二个参数(回调函数)
+
+```js
+this.setState({ xxx: 1 }, () => {
+  console.log("i am update~");
+});
+```
+
+**对于function组件**
+
+调用 useLayoutEffect hook的回调函数，调度useEffect的销毁与回调函数
+
+> 注意: `useLayoutEffect` 在`mutation`阶段会触发销毁函数，**同步**执行到layout阶段触发回调函数。与useEffect的调度, 并在layout周期结束后异步执行是不一样的。
+
+#### 更新Ref
+
+这没啥好说的
