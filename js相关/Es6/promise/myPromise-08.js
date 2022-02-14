@@ -6,7 +6,6 @@ const FULFILLED = "fulfilled";
 const REJECTED = "rejected";
 class MyPromise {
   constructor(executor) {
-    // ! 处理执行器错误情况
     try {
       executor(this.resolve, this.reject);
     } catch (error) {
@@ -41,10 +40,18 @@ class MyPromise {
     }
   };
   then = (onFulfilled, onRejected) => {
+    // ! 将两个参数处理成可选的
+    onFulfilled =
+      typeof onFulfilled === "function" ? onFulfilled : (value) => value;
+    onRejected =
+      typeof onRejected === "function"
+        ? onRejected
+        : (reason) => {
+            throw reason;
+          };
     const p2 = new MyPromise((resolve, reject) => {
       if (this.status === FULFILLED) {
         queueMicrotask(() => {
-          // ! .then的错误处理
           try {
             const x = onFulfilled(this.value);
             resolvePromise(p2, x, resolve, reject);
@@ -53,10 +60,31 @@ class MyPromise {
           }
         });
       } else if (this.status === REJECTED) {
-        onRejected(this.reason);
+        queueMicrotask(() => {
+          const x = onRejected(this.reason);
+          resolvePromise(p2, x, resolve, reject);
+        });
       } else {
-        this.onFulfilledCallbacks.push(onFulfilled);
-        this.onRejectedCallbacks.push(onRejected);
+        this.onFulfilledCallbacks.push(() => {
+          try {
+            queueMicrotask(() => {
+              const x = onFulfilled(this.value);
+              resolvePromise(p2, x, resolve, reject);
+            });
+          } catch (error) {
+            reject(error);
+          }
+        });
+        this.onRejectedCallbacks.push(() => {
+          try {
+            queueMicrotask(() => {
+              const x = onRejected(this.reason);
+              resolvePromise(p2, x, resolve, reject);
+            });
+          } catch (error) {
+            reject(error);
+          }
+        });
       }
     });
     return p2;
