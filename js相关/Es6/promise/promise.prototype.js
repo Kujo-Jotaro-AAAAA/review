@@ -77,3 +77,18 @@ MyPromise.prototype.allSettled = function () {
     });
   });
 };
+MyPromise.prototype.race = function (promises) {
+  if (!Array.isArray(promises)) throw new Error("promises must Array!!");
+  return new MyPromise((resolve, reject) => {
+    promises.forEach((p) => {
+      MyPromise.resolve(p).then(
+        (val) => {
+          resolve(val);
+        },
+        (reason) => {
+          reject(reason);
+        }
+      );
+    });
+  });
+};
