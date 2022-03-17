@@ -28,3 +28,6 @@
 document.cookie="键=值";
 ```
 
+[cookie数量限制 ](https://cloud.tencent.com/developer/article/1096075) 
+
+一般限定20个比较合理, 理论上无限制。
